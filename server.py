@@ -2,7 +2,7 @@ from fastmcp import FastMCP
 from dotenv import load_dotenv
 import os
 import asyncio
-from browser import setup_browser, click_button, analyze_dom
+from browser import setup_browser, click_button, analyze_dom, highlight_elements_on_page
 
 # Load environment variables
 load_dotenv()
@@ -28,7 +28,11 @@ async def navigate_to_page(url: str) -> str:
     
     try:
         if browser_instance is None:
+            # Explicitly ensure browser is visible with a good window size
             browser_instance = await setup_browser(headless=False)
+            # Set a larger window size for better visibility
+            page = await browser_instance.page()
+            await page.set_viewport_size({"width": 1280, "height": 800})
         
         await browser_instance.goto(url)
         
@@ -99,6 +103,29 @@ async def get_page_elements() -> str:
     except Exception as e:
         return f"Error analyzing page: {str(e)}"
 
+@mcp.tool()
+async def highlight_page_elements() -> str:
+    """
+    Highlight interactive elements on the current page with visual indicators.
+    
+    Returns:
+        Status message
+    """
+    global browser_instance
+    
+    try:
+        if browser_instance is None:
+            return "Browser not initialized. Please navigate to a page first."
+        
+        result = await highlight_elements_on_page(browser_instance)
+        
+        if result["status"] == "success":
+            return "Successfully highlighted interactive elements on the page. You should now see visual indicators around buttons and links."
+        else:
+            return f"Error: {result['message']}"
+    except Exception as e:
+        return f"Error highlighting elements: {str(e)}"
+
 @mcp.prompt()
 def help_prompt() -> str:
     """Create a helpful prompt for users"""
@@ -109,11 +136,13 @@ def help_prompt() -> str:
     - navigate_to_page: Navigate to a specific URL
     - click_browser_button: Click a button on the current page
     - get_page_elements: Analyze the current page and list all clickable elements
+    - highlight_page_elements: Highlight interactive elements on the current page with visual indicators
     
     Example usage:
     1. "Navigate to https://www.rayon.design/"
-    2. "List all clickable elements on the current page"
-    3. "Click the button that says 'New Project'"
+    2. "Highlight all interactive elements on the page"
+    3. "List all clickable elements on the current page"
+    4. "Click the button that says 'New Project'"
     """
 
 if __name__ == "__main__":
