@@ -1,0 +1,6 @@
+browser-use
+langchain-anthropic
+langchain-openai
+python-dotenv
+fastmcp 
+mcp[cli]
