@@ -29,6 +29,7 @@ async def find_drawing_methods(shape_name: str, context: Context) -> str:
 3. Identify tools and methods that can be used to draw a "{shape_name}"
 4. Document the steps needed to draw a "{shape_name}" using the available tools
 5. Note any specific parameters or settings required for drawing a "{shape_name}"
+6. Return a detailed list of steps to draw a "{shape_name}" including which buttons to click and actions to take
 """
     
     search_results[context.request_id] = f"Search for '{shape_name}' drawing methods in progress. Check back in 30 seconds"
@@ -83,7 +84,7 @@ async def draw_shape(shape_name: str, context: Context) -> str:
     
     task = f"""
 1. Go to https://www.rayon.design/
-2. Navigate to the CAD drawing interface (look for "Create" or "Draw" buttons)
+2. Navigate to the CAD drawing interface by clicking on the "New Model" button on the top right
 3. Once in the drawing interface, identify the tools needed to draw a "{shape_name}"
 4. Select the appropriate tool for drawing a "{shape_name}"
 5. Draw the "{shape_name}" in the center of the canvas
