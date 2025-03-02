@@ -1,150 +1,126 @@
-from fastmcp import FastMCP
-from dotenv import load_dotenv
-import os
+#!/usr/bin/env python3
 import asyncio
-from browser import setup_browser, click_button, analyze_dom, highlight_elements_on_page
+from dotenv import load_dotenv
+from mcp.server.fastmcp import FastMCP, Context
+from browser import run_browser_agent
 
-# Load environment variables
+# Load environment variables from .env file
 load_dotenv()
 
-# Create the MCP server
-mcp = FastMCP("CAD-MCP")
+# Initialize FastMCP server
+mcp = FastMCP("uber_eats")
 
-# Global browser instance to reuse
-browser_instance = None
+# In-memory storage for search results
+search_results = {}
 
 @mcp.tool()
-async def navigate_to_page(url: str) -> str:
-    """
-    Navigate to a specific URL.
+async def find_menu_options(search_term: str, context: Context) -> str:
+    """Search Uber Eats for restaurants or food items.
     
     Args:
-        url: The URL to navigate to
-        
-    Returns:
-        Status message
+        search_term: Food or restaurant to search for
     """
-    global browser_instance
     
-    try:
-        if browser_instance is None:
-            # Explicitly ensure browser is visible with a good window size
-            browser_instance = await setup_browser(headless=False)
-            # Set a larger window size for better visibility
-            page = await browser_instance.page()
-            await page.set_viewport_size({"width": 1280, "height": 800})
-        
-        await browser_instance.goto(url)
-        
-        return f"Successfully navigated to {url}"
-    except Exception as e:
-        return f"Error navigating to {url}: {str(e)}"
+    # Create the search task
+    task = f"""
+0. Start by going to: https://www.rayon.design/
+1. Type "{search_term}" in the global search bar and press enter
+2. Go to the first search result (this is the most popular restaurant).
+3. When you can see the menu options for the resturant, we need to use the specific search input for the resturant located under the banned (identify it by the placeholder "Search in [restaurant name]"
+4. Click the input field and type "{search_term}", then press enter
+5. Check for menu options related to "{search_term}"
+6. Get the name, url and price of the top 3 items related to "{search_term}". URL is very important
+"""
+    
+    search_results[context.request_id] = f"Search for '{search_term}' in progress. Check back in 30 seconds"
 
-@mcp.tool()
-async def click_browser_button(selector: str) -> str:
-    """
-    Click a button in the browser using the provided selector.
+    asyncio.create_task(
+        perform_search(context.request_id, search_term, task, context)
+    )    
+    
+    return f"Search for '{search_term}' started. Please wait for 2 minutes, then you can retrieve results using the resource URI: resource://search_results/{context.request_id}. Use a terminal sleep statement to wait for 2 minutes."
+
+async def perform_search(request_id: str, search_term: str, task: str, context: Context):
+    """Perform the actual search in the background."""
+    try:
+        step_count = 0
+        
+        async def step_handler(*args, **kwargs):
+            nonlocal step_count
+            step_count += 1
+            await context.info(f"Step {step_count} completed")
+            await context.report_progress(step_count)
+        
+        result = await run_browser_agent(task=task, on_step=step_handler)
+        
+        search_results[request_id] = result
+    
+    except Exception as e:
+        # Store the error with the request ID
+        search_results[request_id] = f"Error: {str(e)}"
+        await context.error(f"Error searching for '{search_term}': {str(e)}")
+
+@mcp.resource(uri="resource://search_results/{request_id}")
+async def get_search_results(request_id: str) -> str:
+    """Get the search results for a given request ID.
     
     Args:
-        selector: CSS selector or text selector for the button (e.g. "button:text('Login')" or "#submit-button")
-        
-    Returns:
-        Status message
+        request_id: The ID of the request to get the search results for
     """
-    global browser_instance
+    # Check if the results exist
+    if request_id not in search_results:
+        return f"No search results found for request ID: {request_id}"
     
-    try:
-        if browser_instance is None:
-            return "Browser not initialized. Please navigate to a page first."
-        
-        result = await click_button(browser_instance, selector)
-        
-        if result["status"] == "success":
-            return result["message"]
-        else:
-            return f"Error: {result['message']}"
-    except Exception as e:
-        return f"Error clicking button: {str(e)}"
+    # Return the successful search results
+    return search_results[request_id]
 
 @mcp.tool()
-async def get_page_elements() -> str:
-    """
-    Analyze the current page and list all clickable elements.
+async def order_food(item_url: str, item_name: str, context: Context) -> str:
+    """Order food from a restaurant.
     
-    Returns:
-        Information about buttons and links on the page
+    Args:
+        restaurant_url: URL of the restaurant
+        item_name: Name of the item to order
     """
-    global browser_instance
     
-    try:
-        if browser_instance is None:
-            return "Browser not initialized. Please navigate to a page first."
-        
-        result = await analyze_dom(browser_instance)
-        
-        if result["status"] == "success":
-            # Format the results
-            output = f"Current URL: {result['page_url']}\n\n"
-            
-            output += "BUTTONS:\n"
-            for i, button in enumerate(result["buttons"]):
-                if button["visible"]:
-                    status = "disabled" if button["disabled"] else "enabled"
-                    output += f"{i+1}. \"{button['text']}\" ({status})\n"
-            
-            output += "\nLINKS:\n"
-            for i, link in enumerate(result["links"]):
-                if link["visible"]:
-                    output += f"{i+1}. \"{link['text']}\" -> {link['href']}\n"
-            
-            return output
-        else:
-            return f"Error: {result['message']}"
-    except Exception as e:
-        return f"Error analyzing page: {str(e)}"
+    task = f"""
+1. Go to {item_url}
+2. Click "Add to order"
+3. Wait 3 seconds
+4. Click "Go to checkout"
+5. If there are upsell modals, click "Skip"
+6. Click "Place order"
+"""
+    
+    # Start the background task for ordering
+    asyncio.create_task(
+        perform_order(item_url, item_name, task, context)
+    )
+    
+    # Return a message immediately
+    return f"Order for '{item_name}' started. Your order is being processed."
 
-@mcp.tool()
-async def highlight_page_elements() -> str:
-    """
-    Highlight interactive elements on the current page with visual indicators.
-    
-    Returns:
-        Status message
-    """
-    global browser_instance
-    
+async def perform_order(restaurant_url: str, item_name: str, task: str, context: Context):
+    """Perform the actual food ordering in the background."""
     try:
-        if browser_instance is None:
-            return "Browser not initialized. Please navigate to a page first."
+        step_count = 0
         
-        result = await highlight_elements_on_page(browser_instance)
+        async def step_handler(*args, **kwargs):
+            nonlocal step_count
+            step_count += 1
+            await context.info(f"Order step {step_count} completed")
+            await context.report_progress(step_count)
         
-        if result["status"] == "success":
-            return "Successfully highlighted interactive elements on the page. You should now see visual indicators around buttons and links."
-        else:
-            return f"Error: {result['message']}"
+        result = await run_browser_agent(task=task, on_step=step_handler)
+        
+        # Report completion
+        await context.info(f"Order for '{item_name}' has been placed successfully!")
+        return result
+    
     except Exception as e:
-        return f"Error highlighting elements: {str(e)}"
-
-@mcp.prompt()
-def help_prompt() -> str:
-    """Create a helpful prompt for users"""
-    return """
-    This MCP server can control a web browser to analyze and interact with web pages.
-    
-    Available tools:
-    - navigate_to_page: Navigate to a specific URL
-    - click_browser_button: Click a button on the current page
-    - get_page_elements: Analyze the current page and list all clickable elements
-    - highlight_page_elements: Highlight interactive elements on the current page with visual indicators
-    
-    Example usage:
-    1. "Navigate to https://www.rayon.design/"
-    2. "Highlight all interactive elements on the page"
-    3. "List all clickable elements on the current page"
-    4. "Click the button that says 'New Project'"
-    """
+        error_msg = f"Error ordering '{item_name}': {str(e)}"
+        await context.error(error_msg)
+        return error_msg
 
 if __name__ == "__main__":
-    # Run the MCP server
-    mcp.run() 
+    mcp.run(transport='stdio') 

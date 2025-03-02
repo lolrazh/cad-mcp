@@ -1,6 +1,13 @@
 {
-  "name": "CAD-MCP",
-  "description": "A simple MCP server for browser automation and CAD drawing",
-  "path": "/d:/Projects/2025/cad-mcp/server.py",
-  "command": "python server.py"
-} 
+  "mcpServers": {
+      "cad_mcp": {
+          "command": "uv",
+          "args": [
+              "--directory",
+              "D:/Projects/2025/cad-mcp-server",
+              "run",
+              "server.py"
+          ]
+      }
+  }
+}
