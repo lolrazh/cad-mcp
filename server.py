@@ -25,11 +25,12 @@ async def find_drawing_methods(shape_name: str, context: Context) -> str:
     task = f"""
 0. Start by going to: https://www.rayon.design/
 1. Navigate to the CAD drawing interface by clicking on the "New Model" button on the top right
-2. Once in the drawing interface, explore the toolbar and menu options
-3. Identify tools and methods that can be used to draw a "{shape_name}"
-4. Document the steps needed to draw a "{shape_name}" using the available tools
-5. Note any specific parameters or settings required for drawing a "{shape_name}"
-6. Return a detailed list of steps to draw a "{shape_name}" including which buttons to click and actions to take
+2. Once in the drawing interface, look for the toolbar at the bottom center of the screen (DO NOT USE THE QUICK HELP BUTTONS) - this dock bar contains all the drawing elements and tools
+3. Some drawing options may be hidden - look for arrow icons that can be clicked to expand additional drawing options
+4. Identify tools and methods that can be used to draw a "{shape_name}"
+5. Document the steps needed to draw a "{shape_name}" using the available tools
+6. Note any specific parameters or settings required for drawing a "{shape_name}"
+7. Return a detailed list of steps to draw a "{shape_name}" including which buttons to click and actions to take
 """
     
     search_results[context.request_id] = f"Search for '{shape_name}' drawing methods in progress. Check back in 30 seconds"
@@ -85,11 +86,13 @@ async def draw_shape(shape_name: str, context: Context) -> str:
     task = f"""
 1. Go to https://www.rayon.design/
 2. Navigate to the CAD drawing interface by clicking on the "New Model" button on the top right
-3. Once in the drawing interface, identify the tools needed to draw a "{shape_name}"
-4. Select the appropriate tool for drawing a "{shape_name}"
-5. Draw the "{shape_name}" in the center of the canvas
-6. If applicable, adjust the size and properties of the "{shape_name}" to make it clearly visible
-7. Save the drawing if possible
+3. Look for the toolbar at the bottom center of the screen (DO NOT USE THE QUICK HELP BUTTONS) - this dock bar contains all the drawing elements and tools
+4. Some drawing options may be hidden - look for arrow icons that can be clicked to expand additional drawing options
+5. Identify the tools needed to draw a "{shape_name}"
+6. Select the appropriate tool for drawing a "{shape_name}"
+7. Draw the "{shape_name}" in the center of the canvas
+8. If applicable, adjust the size and properties of the "{shape_name}" to make it clearly visible
+9. Save the drawing if possible
 """
     
     # Start the background task for drawing

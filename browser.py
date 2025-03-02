@@ -15,7 +15,8 @@ browser = Browser(
     )
 )
 
-llm = ChatAnthropic(model_name="claude-3-5-sonnet-latest")
+llm = ChatOpenAI(model_name="gpt-4.5-preview")
+# llm = ChatAnthropic(model_name="claude-3-5-sonnet-latest")
 
 task_template = """
 perform the following task
